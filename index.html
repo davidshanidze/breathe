@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breathe - Breathing Practices</title>
+    <meta name="description" content="Transform your state with guided breathing practices. Relaxation, energy, balance, and sleep.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Icons
+        function Wind({ className, style }) {
+            return <svg className={className} style={style} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" /></svg>;
+        }
+        function Moon({ className, style }) {
+            return <svg className={className} style={style} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>;
+        }
+        function Zap({ className, style }) {
+            return <svg className={className} style={style} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
+        }
+        function Heart({ className, style }) {
+            return <svg className={className} style={style} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>;
+        }
+        function ArrowLeft({ className }) {
+            return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>;
+        }
+        function Play({ className, style }) {
+            return <svg className={className} style={style} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+        }
+        function Pause({ className }) {
+            return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+        }
+        function Volume2({ className }) {
+            return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>;
+        }
+        function VolumeX({ className }) {
+            return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>;
+        }
+
+        function BreathingApp() {
+            const [selectedPractice, setSelectedPractice] = useState(null);
+            const [isActive, setIsActive] = useState(false);
+            const [phase, setPhase] = useState('ready');
+            const [countdown, setCountdown] = useState(0);
+            const [cycleCount, setCycleCount] = useState(0);
+            const [isMuted, setIsMuted] = useState(false);
+            const audioContextRef = useRef(null);
+            const backgroundMusicRef = useRef(null);
+            const audioCache = useRef({});
+
+            const audioFiles = {
+                intro_relax: 'https://raw.githubusercontent.com/davidshanidze/breathe/main/audio/intro_relax.mp3',
+                intro_energy: 'https://raw.githubusercontent.com/davidshanidze/breathe/main/audio/intro_energy.mp3',
+                intro_calm: 'https://raw.githubusercontent.com/davidshanidze/breathe/main/audio/intro_calm.mp3',
+                intro_sleep: 'https://raw.githubusercontent.com/davidshanidze/breathe/main/audio/intro_sleep.mp3',
+                breathe_in: 'https://raw.githubusercontent.com/davidshanidze/breathe/main/audio/breathe_in.mp3',
+                breathe_out: 'https://raw.githubusercontent.com/davidshanidze/breathe/main/audio/breathe_out.mp3',
+                hold: 'https://raw.githubusercontent.com/davidshanidze/breathe/main/audio/hold.mp3',
+                pause: 'https://raw.githubusercontent.com/davidshanidze/breathe/main/audio/pause.mp3',
+                complete: 'https://raw.githubusercontent.com/davidshanidze/breathe/main/audio/complete.mp3'
+            };
+
+            const practices = {
+                relax: {
+                    name: 'Relaxation',
+                    subtitle: '4-7-8 TECHNIQUE',
+                    icon: Wind,
+                    color: '#00D9FF',
+                    gradient: 'from-cyan-500/20 to-blue-500/20',
+                    description: 'Deep relaxation of the nervous system',
+                    pattern: [
+                        { phase: 'inhale', duration: 4, text: 'Breathe in', instruction: 'Slowly inhale through your nose' },
+                        { phase: 'hold', duration: 7, text: 'Hold', instruction: 'Hold your breath gently' },
+                        { phase: 'exhale', duration: 8, text: 'Breathe out', instruction: 'Slowly exhale through your mouth' }
+                    ],
+                    cycles: 4,
+                    frequency: 200
+                },
+                energy: {
+                    name: 'Energy',
+                    subtitle: 'ACTIVATION',
+                    icon: Zap,
+                    color: '#FFB800',
+                    gradient: 'from-yellow-500/20 to-orange-500/20',
+                    description: 'Quick boost of vitality and energy',
+                    pattern: [
+                        { phase: 'inhale', duration: 2, text: 'Breathe in', instruction: 'Quick inhale through nose' },
+                        { phase: 'exhale', duration: 2, text: 'Breathe out', instruction: 'Quick exhale through mouth' }
+                    ],
+                    cycles: 10,
+                    frequency: 400
+                },
+                calm: {
+                    name: 'Balance',
+                    subtitle: 'HARMONY 4-4-4-4',
+                    icon: Heart,
+                    color: '#00FF94',
+                    gradient: 'from-green-500/20 to-emerald-500/20',
+                    description: 'Equilibrium of body and mind',
+                    pattern: [
+                        { phase: 'inhale', duration: 4, text: 'Breathe in', instruction: 'Inhale through your nose' },
+                        { phase: 'hold', duration: 4, text: 'Pause', instruction: 'Hold your breath' },
+                        { phase: 'exhale', duration: 4, text: 'Breathe out', instruction: 'Exhale through your mouth' },
+                        { phase: 'hold', duration: 4, text: 'Pause', instruction: 'Hold your breath' }
+                    ],
+                    cycles: 5,
+                    frequency: 250
+                },
+                sleep: {
+                    name: 'Sleep',
+                    subtitle: 'DEEP REST',
+                    icon: Moon,
+                    color: '#B794F6',
+                    gradient: 'from-purple-500/20 to-indigo-500/20',
+                    description: 'Preparation for deep sleep',
+                    pattern: [
+                        { phase: 'inhale', duration: 4, text: 'Breathe in', instruction: 'Deep inhale through your nose' },
+                        { phase: 'hold', duration: 4, text: 'Hold', instruction: 'Gently hold your breath' },
+                        { phase: 'exhale', duration: 6, text: 'Breathe out', instruction: 'Very slow exhale' }
+                    ],
+                    cycles: 6,
+                    frequency: 150
+                }
+            };
+
+            const currentPattern = selectedPractice ? practices[selectedPractice].pattern : [];
+            const [patternIndex, setPatternIndex] = useState(0);
+            const currentStep = currentPattern[patternIndex] || {};
+
+            useEffect(() => {
+                audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+                
+                Object.keys(audioFiles).forEach(key => {
+                    const audio = new Audio(audioFiles[key]);
+                    audio.preload = 'auto';
+                    audioCache.current[key] = audio;
+                });
+                
+                return () => {
+                    if (audioContextRef.current) {
+                        audioContextRef.current.close();
+                    }
+                };
+            }, []);
+
+            const playAudio = (key) => {
+                if (isMuted || !audioCache.current[key]) return;
+                const audio = audioCache.current[key];
+                audio.currentTime = 0;
+                audio.volume = 0.8;
+                audio.play().catch(err => console.log('Audio play error:', err));
+            };
+
+            const speak = (text) => {
+                if (isMuted) return;
+                const textToAudio = {
+                    'Breathe in': 'breathe_in',
+                    'Breathe out': 'breathe_out',
+                    'Hold': 'hold',
+                    'Pause': 'pause'
+                };
+                const audioKey = textToAudio[text];
+                if (audioKey) playAudio(audioKey);
+            };
+
+            const playTone = (frequency, duration = 0.3) => {
+                if (isMuted || !audioContextRef.current) return;
+                const audioContext = audioContextRef.current;
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            };
+
+            const playBreathSound = (type, duration) => {
+                if (isMuted || !audioContextRef.current) return;
+                const audioContext = audioContextRef.current;
+                const bufferSize = audioContext.sampleRate * duration;
+                const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                for (let i = 0; i < bufferSize; i++) {
+                    const progress = i / bufferSize;
+                    const envelope = Math.sin(progress * Math.PI) * (type === 'inhale' ? 0.5 : 0.45);
+                    data[i] = (Math.random() * 2 - 1) * envelope;
+                }
+                
+                const source = audioContext.createBufferSource();
+                const filter = audioContext.createBiquadFilter();
+                const gainNode = audioContext.createGain();
+                
+                filter.type = type === 'inhale' ? 'highpass' : 'lowpass';
+                filter.frequency.value = type === 'inhale' ? 800 : 600;
+                gainNode.gain.value = type === 'inhale' ? 0.4 : 0.5;
+                
+                source.buffer = buffer;
+                source.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                source.start();
+            };
+
+            const playBackgroundMusic = () => {
+                if (isMuted || !audioContextRef.current || backgroundMusicRef.current) return;
+                const audioContext = audioContextRef.current;
+                const oscillators = [];
+                const gainNodes = [];
+                const notes = [
+                    { freq: 130.81, gain: 0.025 },
+                    { freq: 146.83, gain: 0.02 },
+                    { freq: 174.61, gain: 0.018 },
+                    { freq: 196.00, gain: 0.022 },
+                    { freq: 220.00, gain: 0.015 }
+                ];
+                
+                notes.forEach((note, i) => {
+                    setTimeout(() => {
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        const filter = audioContext.createBiquadFilter();
+                        osc.type = 'sine';
+                        osc.frequency.value = note.freq;
+                        filter.type = 'lowpass';
+                        filter.frequency.value = 800;
+                        gain.gain.value = 0;
+                        gain.gain.linearRampToValueAtTime(note.gain, audioContext.currentTime + 2);
+                        osc.connect(filter);
+                        filter.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.start();
+                        oscillators.push(osc);
+                        gainNodes.push(gain);
+                    }, i * 800);
+                });
+                backgroundMusicRef.current = { oscillators, gainNodes };
+            };
+
+            const stopBackgroundMusic = () => {
+                if (backgroundMusicRef.current) {
+                    const audioContext = audioContextRef.current;
+                    backgroundMusicRef.current.gainNodes.forEach((gain, i) => {
+                        setTimeout(() => {
+                            gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 1);
+                        }, i * 100);
+                    });
+                    setTimeout(() => {
+                        if (backgroundMusicRef.current) {
+                            backgroundMusicRef.current.oscillators.forEach(osc => osc.stop());
+                            backgroundMusicRef.current = null;
+                        }
+                    }, 1500);
+                }
+            };
+
+            useEffect(() => {
+                if (!isActive) return;
+                if (countdown > 0) {
+                    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+                    return () => clearTimeout(timer);
+                } else {
+                    const nextIndex = (patternIndex + 1) % currentPattern.length;
+                    if (nextIndex === 0) {
+                        const newCycleCount = cycleCount + 1;
+                        setCycleCount(newCycleCount);
+                        if (newCycleCount >= practices[selectedPractice].cycles) {
+                            setIsActive(false);
+                            setPhase('complete');
+                            stopBackgroundMusic();
+                            playTone(523.25, 1);
+                            playAudio('complete');
+                            return;
+                        }
+                    }
+                    setPatternIndex(nextIndex);
+                    setPhase(currentPattern[nextIndex].phase);
+                    setCountdown(currentPattern[nextIndex].duration);
+                    if (currentPattern[nextIndex].phase === 'inhale') {
+                        playBreathSound('inhale', currentPattern[nextIndex].duration);
+                    } else if (currentPattern[nextIndex].phase === 'exhale') {
+                        playBreathSound('exhale', currentPattern[nextIndex].duration);
+                    } else {
+                        playTone(practices[selectedPractice].frequency, 0.2);
+                    }
+                    speak(currentPattern[nextIndex].text);
+                }
+            }, [countdown, isActive]);
+
+            const startPractice = (practiceKey) => {
+                setSelectedPractice(practiceKey);
+                setIsActive(false);
+                setPhase('ready');
+                setCycleCount(0);
+                setPatternIndex(0);
+                setCountdown(0);
+            };
+
+            const togglePractice = async () => {
+                if (!isActive && phase === 'ready') {
+                    if (!isMuted) {
+                        const introKey = `intro_${selectedPractice}`;
+                        playAudio(introKey);
+                        await new Promise(resolve => setTimeout(resolve, 10000));
+                    }
+                    setPatternIndex(0);
+                    setPhase(currentPattern[0].phase);
+                    setCountdown(currentPattern[0].duration);
+                    setCycleCount(0);
+                    playBackgroundMusic();
+                    if (currentPattern[0].phase === 'inhale') {
+                        playBreathSound('inhale', currentPattern[0].duration);
+                    } else if (currentPattern[0].phase === 'exhale') {
+                        playBreathSound('exhale', currentPattern[0].duration);
+                    }
+                    speak(currentPattern[0].text);
+                    setIsActive(true);
+                } else if (!isActive && phase !== 'ready') {
+                    playBackgroundMusic();
+                    setIsActive(true);
+                } else {
+                    stopBackgroundMusic();
+                    setIsActive(false);
+                }
+            };
+
+            const resetPractice = () => {
+                setSelectedPractice(null);
+                setIsActive(false);
+                setPhase('ready');
+                setCycleCount(0);
+                setPatternIndex(0);
+                setCountdown(0);
+                stopBackgroundMusic();
+            };
+
+            const getCircleScale = () => {
+                if (phase === 'inhale') return 1.5;
+                if (phase === 'exhale') return 0.6;
+                return 1;
+            };
+
+            if (!selectedPractice) {
+                return (
+                    <div className="min-h-screen bg-black text-white p-6">
+                        <div className="max-w-6xl mx-auto">
+                            <div className="mb-16 pt-8">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                                    <span className="text-cyan-400 text-sm font-mono tracking-widest">BREATHING SYSTEM</span>
+                                </div>
+                                <h1 className="text-6xl font-bold mb-4 tracking-tight">Breathing<br />Practices</h1>
+                                <p className="text-gray-400 text-lg">Choose a practice for your state</p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {Object.keys(practices).map((key) => {
+                                    const practice = practices[key];
+                                    const Icon = practice.icon;
+                                    return (
+                                        <button
+                                            key={key}
+                                            onClick={() => startPractice(key)}
+                                            className={`group relative bg-gradient-to-br ${practice.gradient} backdrop-blur-sm border border-white/10 rounded-3xl p-8 text-left transition-all duration-300 hover:border-white/30 hover:scale-[1.02]`}
+                                            style={{ boxShadow: `0 0 40px ${practice.color}20` }}
+                                        >
+                                            <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity blur-xl" style={{ background: `radial-gradient(circle at 50% 50%, ${practice.color}40, transparent 70%)` }} />
+                                            <div className="relative">
+                                                <div className="flex items-start justify-between mb-6">
+                                                    <div className="p-4 rounded-2xl" style={{ backgroundColor: `${practice.color}20`, boxShadow: `0 0 20px ${practice.color}30` }}>
+                                                        <Icon className="w-8 h-8" style={{ color: practice.color }} />
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-xs text-gray-500 font-mono mb-1">{practice.cycles} CYCLES</div>
+                                                        <div className="text-xs text-gray-500 font-mono">{practice.cycles * practice.pattern.reduce((sum, step) => sum + step.duration, 0)}s</div>
+                                                    </div>
+                                                </div>
+                                                <div className="mb-2">
+                                                    <div className="text-xs text-gray-500 font-mono mb-1">{practice.subtitle}</div>
+                                                    <h2 className="text-3xl font-bold mb-3" style={{ color: practice.color }}>{practice.name}</h2>
+                                                </div>
+                                                <p className="text-gray-400 text-sm leading-relaxed">{practice.description}</p>
+                                                <div className="mt-6 flex gap-2">
+                                                    {practice.pattern.map((step, idx) => (
+                                                        <div key={idx} className="flex-1 h-1 rounded-full bg-white/10" style={{ background: `linear-gradient(90deg, ${practice.color}40, ${practice.color}10)` }} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-12 text-center text-gray-600 text-sm">
+                                <p className="flex items-center justify-center gap-2"><Volume2 className="w-4 h-4" /> Best experienced with headphones • Ambient music included</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            const practice = practices[selectedPractice];
+            const progress = ((cycleCount / practice.cycles) * 100).toFixed(0);
+            const scale = getCircleScale();
+
+            return (
+                <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
+                    <div className="w-full max-w-2xl">
+                        <div className="flex items-center justify-between mb-12">
+                            <button onClick={resetPractice} className="flex items-center gap-2 text-gray-400 hover:text-white transition group">
+                                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                                <span className="font-mono text-sm">BACK</span>
+                            </button>
+                            <button onClick={() => setIsMuted(!isMuted)} className="p-3 rounded-full bg-white/5 hover:bg-white/10 transition border border-white/10">
+                                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                            </button>
+                        </div>
+                        <div className="text-center">
+                            <div className="mb-2">
+                                <div className="text-xs text-gray-500 font-mono mb-2">{practice.subtitle}</div>
+                                <h1 className="text-5xl font-bold mb-8" style={{ color: practice.color }}>{practice.name}</h1>
+                            </div>
+                            <div className="mb-12">
+                                <div className="flex justify-between text-sm text-gray-500 font-mono mb-3">
+                                    <span>CYCLE {cycleCount + 1}/{practice.cycles}</span>
+                                    <span>{progress}%</span>
+                                </div>
+                                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: practice.color, boxShadow: `0 0 10px ${practice.color}` }} />
+                                </div>
+                            </div>
+                            <div className="relative h-96 flex items-center justify-center mb-12">
+                                {[0, 1, 2, 3].map((i) => (
+                                    <div key={i} className="absolute rounded-full border transition-all duration-1000 ease-in-out" style={{
+                                        width: `${(300 + i * 50) * scale}px`,
+                                        height: `${(300 + i * 50) * scale}px`,
+                                        borderColor: `${practice.color}${15 - i * 3}`,
+                                        borderWidth: '2px',
+                                        transitionDuration: `${currentStep.duration || 1}000ms`,
+                                        filter: `blur(${i * 0.5}px)`
+                                    }} />
+                                ))}
+                                <button onClick={phase === 'ready' ? togglePractice : undefined} disabled={phase !== 'ready'} className={`absolute rounded-full flex items-center justify-center transition-all ease-in-out ${phase === 'ready' ? 'cursor-pointer hover:scale-110' : 'cursor-default'}`} style={{
+                                    width: `${280 * scale}px`,
+                                    height: `${280 * scale}px`,
+                                    background: phase === 'ready' ? `radial-gradient(circle, ${practice.color}, ${practice.color}80)` : `radial-gradient(circle, ${practice.color}40, ${practice.color}10)`,
+                                    boxShadow: phase === 'ready' ? `0 0 100px ${practice.color}, 0 0 60px ${practice.color}80, inset 0 0 40px ${practice.color}40` : `0 0 80px ${practice.color}60`,
+                                    transitionDuration: `${currentStep.duration || 1}000ms`,
+                                    border: `3px solid ${practice.color}80`
+                                }}>
+                                    <div className="text-center relative z-10">
+                                        {phase === 'complete' ? (
+                                            <div><div className="text-7xl mb-4 animate-bounce">✓</div><div className="text-sm font-mono text-white">COMPLETE</div></div>
+                                        ) : isActive ? (
+                                            <div><div className="text-8xl font-bold mb-2" style={{ color: '#fff', textShadow: `0 0 20px ${practice.color}, 0 0 40px ${practice.color}` }}>{countdown}</div><div className="text-lg font-mono tracking-widest" style={{ color: '#fff' }}>{currentStep.text?.toUpperCase()}</div></div>
+                                        ) : phase === 'ready' ? (
+                                            <div className="flex flex-col items-center gap-4"><Play className="w-20 h-20 animate-pulse" style={{ color: '#fff', filter: `drop-shadow(0 0 10px ${practice.color})` }} /><div className="text-xl font-mono tracking-widest" style={{ color: '#fff' }}>TAP TO START</div></div>
+                                        ) : null}
+                                    </div>
+                                </button>
+                            </div>
+                            <div className="mb-12 h-12">
+                                {phase !== 'complete' && phase !== 'ready' && (<p className="text-xl text-gray-400 animate-pulse">{currentStep.instruction}</p>)}
+                                {phase === 'complete' && (<p className="text-xl text-green-400">Practice completed successfully</p>)}
+                            </div>
+                            <div className="flex gap-4 justify-center">
+                                {phase !== 'complete' && phase !== 'ready' && (
+                                    <button onClick={togglePractice} className="group relative px-12 py-5 rounded-full font-mono font-bold transition-all overflow-hidden" style={{
+                                        backgroundColor: isActive ? '#ffffff10' : practice.color,
+                                        color: isActive ? practice.color : '#000',
+                                        boxShadow: isActive ? 'none' : `0 0 30px ${practice.color}60`,
+                                        border: `2px solid ${isActive ? practice.color : 'transparent'}`
+                                    }}>
+                                        <span className="relative z-10 flex items-center gap-3">
+                                            {isActive ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                                            {isActive ? 'PAUSE' : 'CONTINUE'}
+                                        </span>
+                                    </button>
+                                )}
+                                {phase === 'complete' && (
+                                    <button onClick={resetPractice} className="px-12 py-5 rounded-full font-mono font-bold transition-all hover:scale-105" style={{
+                                        backgroundColor: practice.color,
+                                        color: '#000',
+                                        boxShadow: `0 0 40px ${practice.color}80, 0 0 20px ${practice.color}`
+                                    }}>CHOOSE ANOTHER</button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<BreathingApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
